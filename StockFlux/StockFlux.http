@@ -1,0 +1,6 @@
+@StockFlux_HostAddress = http://localhost:5160
+
+GET {{StockFlux_HostAddress}}//api/Categorias/
+Accept: application/json
+
+###
