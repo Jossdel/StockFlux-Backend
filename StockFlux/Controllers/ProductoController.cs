@@ -21,11 +21,11 @@ namespace StockFlux.Controllers
             var productoCreado = await _serviceProducto.CrearProducto(productoDto);
             return Ok(productoCreado);
         }
-        // GET: api/Productos
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductoDto>>> BuscarProductos([FromQuery] ProductoDto productoDto)
+        // GET: api/Productos/buscar
+        [HttpGet("buscar")]
+        public async Task<ActionResult<IEnumerable<ProductoDto>>> BuscarProductos([FromQuery] string? nombre)
         {
-            var productos = await _serviceProducto.BuscarProductos(productoDto);
+            var productos = await _serviceProducto.BuscarProductos(nombre);
             return Ok(productos);
         }
 

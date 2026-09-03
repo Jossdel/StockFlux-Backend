@@ -13,9 +13,60 @@ namespace StockFlux.Services
         {
             _context = context;
         }
-        //crear producto
+
+        // 1. OBTENER TODOS LOS PRODUCTOS
+        public async Task<List<ProductoDto>> ObtenerTodos()
+        {
+            return await _context.Productos
+                .AsNoTracking()
+                .Select(p => new ProductoDto
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    Descripcion = p.Descripcion,
+                    PrecioCompra = p.PrecioCompra,
+                    PrecioVenta = p.PrecioVenta,
+                    Stock = p.Stock,
+                    StockMinimo = p.StockMinimo,
+                    CategoriaId = p.CategoriaId
+                })
+                .ToListAsync();
+        }
+
+ 
+        // 3. BUSCAR PRODUCTOS POR NOMBRE (PROTEGIDO CONTRA NULLS)
+        public async Task<List<ProductoDto>> BuscarProductos(string? nombre)
+        {
+            var query = _context.Productos.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                query = query.Where(p => p.Nombre.ToLower().Contains(nombre.ToLower()));
+            }
+
+            return await query.Select(p => new ProductoDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Descripcion = p.Descripcion,
+                PrecioCompra = p.PrecioCompra,
+                PrecioVenta = p.PrecioVenta,
+                Stock = p.Stock,
+                StockMinimo = p.StockMinimo,
+                CategoriaId = p.CategoriaId
+            }).ToListAsync();
+        }
+
+        // 4. CREAR PRODUCTO (CON VALIDACIÓN DE CATEGORÍA)
         public async Task<ProductoDto> CrearProducto(ProductoDto productoDto)
         {
+            // Validar que la categoría exista
+            var categoriaExiste = await _context.Categorias.AnyAsync(c => c.Id == productoDto.CategoriaId);
+            if (!categoriaExiste)
+            {
+                throw new ArgumentException($"La categoría con ID {productoDto.CategoriaId} no existe.");
+            }
+
             var producto = new Producto
             {
                 Nombre = productoDto.Nombre,
@@ -27,34 +78,67 @@ namespace StockFlux.Services
                 CategoriaId = productoDto.CategoriaId
             };
 
-                _context.Productos.Add(producto);
+            _context.Productos.Add(producto);
             await _context.SaveChangesAsync();
-            return new ProductoDto
-            {
-                Id = producto.Id,
-                Nombre = producto.Nombre,
-                Descripcion = producto.Descripcion,
-                PrecioCompra = producto.PrecioCompra,
-                PrecioVenta = producto.PrecioVenta,
-                Stock = producto.Stock,
-                StockMinimo = producto.StockMinimo,
-                CategoriaId = producto.CategoriaId
-            };
-        }
-        // Obtener todos los productos
-        public async Task<List<ProductoDto>> BuscarProductos( ProductoDto productoDto)
-        {
-        return await _context.Productos.Where(p => p.Nombre.Contains(productoDto.Nombre)).Select(p => new ProductoDto 
-        { Id = p.Id,
-          Nombre = p.Nombre,
-          Descripcion = p.Descripcion,
-          PrecioCompra = p.PrecioCompra,
-          PrecioVenta = p.PrecioVenta,
-          Stock = p.Stock,
-          StockMinimo = p.StockMinimo,
-          CategoriaId = p.CategoriaId
-        }).ToListAsync();
+
+            productoDto.Id = producto.Id;
+            return productoDto;
         }
 
+        // 5. ACTUALIZAR PRODUCTO
+        public async Task<ProductoDto?> ActualizarProducto(long id, ProductoDto productoDto)
+        {
+            var productoExistente = await _context.Productos.FindAsync(id);
+            if (productoExistente == null)
+            {
+                return null;
+            }
+
+            // Validar categoría si cambió
+            if (productoExistente.CategoriaId != productoDto.CategoriaId)
+            {
+                var categoriaExiste = await _context.Categorias.AnyAsync(c => c.Id == productoDto.CategoriaId);
+                if (!categoriaExiste)
+                {
+                    throw new ArgumentException($"La categoría con ID {productoDto.CategoriaId} no existe.");
+                }
+            }
+
+            productoExistente.Nombre = productoDto.Nombre;
+            productoExistente.Descripcion = productoDto.Descripcion;
+            productoExistente.PrecioCompra = productoDto.PrecioCompra;
+            productoExistente.PrecioVenta = productoDto.PrecioVenta;
+            productoExistente.Stock = productoDto.Stock;
+            productoExistente.StockMinimo = productoDto.StockMinimo;
+            productoExistente.CategoriaId = productoDto.CategoriaId;
+
+            await _context.SaveChangesAsync();
+
+            return new ProductoDto
+            {
+                Id = productoExistente.Id,
+                Nombre = productoExistente.Nombre,
+                Descripcion = productoExistente.Descripcion,
+                PrecioCompra = productoExistente.PrecioCompra,
+                PrecioVenta = productoExistente.PrecioVenta,
+                Stock = productoExistente.Stock,
+                StockMinimo = productoExistente.StockMinimo,
+                CategoriaId = productoExistente.CategoriaId,
+            };
+        }
+
+        // 6. ELIMINAR PRODUCTO
+        public async Task<bool> EliminarProducto(long id)
+        {
+            var productoExistente = await _context.Productos.FindAsync(id);
+            if (productoExistente == null)
+            {
+                return false;
+            }
+
+            _context.Productos.Remove(productoExistente);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }
