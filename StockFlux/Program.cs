@@ -13,6 +13,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<CategoriaService>();
 builder.Services.AddScoped<ServiceProducto>();
+builder.Services.AddScoped<SalidaService>();
+builder.Services.AddScoped<EntradaService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<VentaService>();
 
 // Configuracion de SQLite
 builder.Services.AddDbContext<AppDbContext>(options =>
