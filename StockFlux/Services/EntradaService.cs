@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using StockFlux.Data;
 using StockFlux.Dtos;
+using StockFlux.Hubs;
 using StockFlux.Model;
 
 namespace StockFlux.Services
@@ -8,10 +11,14 @@ namespace StockFlux.Services
     public class EntradaService
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<InventarioHub> _hubContext;
 
-        public EntradaService(AppDbContext context)
+        public EntradaService(
+            AppDbContext context,
+            IHubContext<InventarioHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // Obtener todas las entradas
@@ -57,11 +64,18 @@ namespace StockFlux.Services
             // Aumentar el stock
             producto.Stock += entradaDto.Cantidad;
 
+            // Guardar la entrada
             _context.Entradas.Add(entrada);
 
             await _context.SaveChangesAsync();
 
+            // Obtener el ID generado por SQLite
             entradaDto.Id = entrada.Id;
+
+            // Avisar a todos los clientes conectados
+            await _hubContext.Clients.All.SendAsync(
+                "InventarioActualizado"
+            );
 
             return entradaDto;
         }
